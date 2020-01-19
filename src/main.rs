@@ -1,23 +1,41 @@
 extern crate glob;
-use std::env;
-use glob::{glob, \\MatchOptions, glob_with};
+mod util;
+use glob::{glob, MatchOptions, glob_with};
+use std::{thread, time};
+use std::sync::mpsc;
+use std::time::Duration;
+
+fn writeDataToFile(line: &str, file: &str) {
+
+}
 
 fn search() {
-    let pattern = format!("/services/**/package.json");
+    let pattern = format!("/**/package.json");
     let options = MatchOptions{
         case_sensitive: false,
         require_literal_leading_dot: false,
         require_literal_separator: false
     };
 
+//    let (sender, receiver) = mspc::channel();
+//
+//    thread::Builder::new().name("child1".to_string()).spawn(move || {
+//
+//    });
+
+    let now = time::Instant::now();
+
 	for entry in glob_with(pattern.as_str(), options).expect("Failed to read glob pattern") {
+        thread::sleep(Duration::from_secs(1));
+        println!("{}", now.elapsed().as_secs());
+
         match entry {
             Ok(path) => {
                 match path.to_str() {
                     Some(data) => {
-                        if !data.contains("node_modules") && !data.starts_with("tools") {
-                            println!("{:?}", path.display())
-                        }
+                        // if !data.contains("node_modules") && !data.starts_with("tools") {
+                            println!("{}", data)
+                        // }
                     },
                     None => println!("Unable to stringify buffer")
                 }
@@ -27,26 +45,8 @@ fn search() {
     }
 }
 
-fn get_working_dir() -> Option<String> {
-    match env::current_dir() {
-        Ok(data) => {
-            let path_string = data.to_str();
-
-            match path_string {
-                Some(cwd) => Some(cwd.to_string()),
-                None => None
-            }
-        },
-        Err(err) => {
-            println!("{}", err);
-
-            None
-        }
-    }
-}
-
 fn main() {
-    match get_working_dir() {
+    match util::get_working_dir() {
         Some(cwd) => {
             println!("{}", cwd.as_str());
         },
