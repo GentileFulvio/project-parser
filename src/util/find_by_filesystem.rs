@@ -1,7 +1,8 @@
 extern crate serde_json;
 use std::fs;
 use crate::util::{get_working_dir};
-use serde_json::{Value, Result};
+use serde_json::{Value};
+use std::ops::Add;
 
 struct FindParams<'a> {
     location: &'a str,
@@ -72,10 +73,21 @@ pub fn get_package_as_json(path: &str) -> Value {
     return json_object;
 }
 
-pub fn extract_package_name(path: &str) -> Value {
-    let json_object = get_package_as_json(path);
+pub fn extract_dependencies(value: Value) -> Value {
+    let dependencies = value["dependencies"].clone();
 
-    return json_object["name"].clone();
+    return dependencies;
+}
+
+pub fn has_property(value: Value, property: &str) -> bool {
+    match value.get(property) {
+        Some(res) => true,
+        None => false
+    }
+}
+
+pub fn extract_package_name(value: Value) -> Value {
+    return value["name"].clone();
 }
 
 pub fn find_by_filesystem() {
@@ -93,17 +105,43 @@ pub fn find_by_filesystem() {
         ignore: vec!["node_modules"]
     });
 
-    let service_names = services_result.clone().into_iter().map(|x| {extract_package_name(x.as_str())});
-    let package_names = packages_result.clone().into_iter().map(|x| {extract_package_name(x.as_str())});
+    let service_names = services_result.clone().into_iter().map(|x| {
+        let json_object = get_package_as_json(x.as_str());
 
-    let amount = services_result.len();
+        (extract_package_name(json_object.clone()), extract_dependencies(json_object.clone()))
+    });
+    let package_names = packages_result.clone().into_iter().map(|x| {
+        let json_object = get_package_as_json(x.as_str());
 
-    println!("========= Services {} =========", services_result.clone().iter().count());
-    for entry in service_names {
-        println!("Service: {}", entry.as_str().unwrap());
+        extract_package_name(json_object)
+    });
+
+    println!("========= Services {} =========", services_result.iter().count());
+
+    for (name, deps) in service_names {
+        let package_dependencies = packages_result.clone().into_iter().fold(String::new(), |acc, p| {
+            let json_object = get_package_as_json(p.as_str());
+
+            let name = extract_package_name(json_object);
+
+            let depends_on_package = has_property(deps.clone(), name.as_str().unwrap());
+
+            return if depends_on_package {
+                acc.add(name.as_str().unwrap())
+            } else {
+                acc
+            }
+        });
+
+        println!("Service: {}", name.as_str().unwrap());
+        if package_dependencies.len() > 0 {
+            println!("\t Depends on |");
+            println!("\t \t {}", package_dependencies);
+        }
     }
 
-    println!("========= Packages {} =========", packages_result.clone().iter().count());
+    println!("========= Packages {} =========", packages_result.iter().count());
+
     for entry in package_names {
         println!("Package: {}", entry.as_str().unwrap())
     }
