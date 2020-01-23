@@ -17,12 +17,12 @@ fn contains_any_strings(data: &str, strings: Vec<&str>) -> bool {
     return false;
 }
 
-fn find(params: FindParams) {
+fn find(params: FindParams) -> Vec<String> {
     let location = params.location;
     let check = params.check;
     let ignore = params.ignore;
     let dir = fs::read_dir(location).unwrap();
-    // let mut result = Vec::new();
+    let mut result = Vec::new();
 
     for entry in dir {
         let data = entry.unwrap();
@@ -40,22 +40,26 @@ fn find(params: FindParams) {
                 location: path_str.clone()
             });
 
-//            for m in res {
-                // result.push(m.clone());
-//            }
+            for m in res {
+                 result.push(m);
+            }
         } else {
             if contains_any_strings(path_str, check.clone()) {
-                println!("{}", path_str);
-                // result.push(path_str.clone());
+                result.push(String::from(path_str));
             }
         }
     }
 
-    // result.clone()
+     return result
 }
 
 pub fn find_by_filesystem() {
     let cwd = get_working_dir().unwrap();
+
+    let package_results = find(FindParams{
+       location: cwd.as_str(),
+        check: vec!["package.json"]
+    })
 
     let result = find(FindParams{
         location: cwd.as_str(),
@@ -63,7 +67,7 @@ pub fn find_by_filesystem() {
         ignore: vec!["node_modules"]
     });
 
-//    for entry in result {
-//        println!("{}", entry);
-//    }
+    for entry in result {
+        println!("{}", entry);
+    }
 }
