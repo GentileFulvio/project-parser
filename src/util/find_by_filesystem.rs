@@ -1,5 +1,7 @@
+extern crate serde_json;
 use std::fs;
 use crate::util::{get_working_dir};
+use serde_json::{Value, Result};
 
 struct FindParams<'a> {
     location: &'a str,
@@ -63,6 +65,19 @@ fn find(params: FindParams) -> Vec<String> {
      return result
 }
 
+pub fn get_package_as_json(path: &str) -> Value {
+    let package_json = fs::read_to_string(path).unwrap();
+    let json_object: Value = serde_json::from_str(package_json.as_str()).unwrap();
+
+    return json_object;
+}
+
+pub fn extract_package_name(path: &str) -> Value {
+    let json_object = get_package_as_json(path);
+
+    return json_object["name"].clone();
+}
+
 pub fn find_by_filesystem() {
     let cwd = get_working_dir().unwrap();
 
@@ -78,7 +93,18 @@ pub fn find_by_filesystem() {
         ignore: vec!["node_modules"]
     });
 
-    services_result.into_iter().for_each(|x| {
-        println!("{}", fs::read_to_string(x).unwrap());
-    });
+    let service_names = services_result.clone().into_iter().map(|x| {extract_package_name(x.as_str())});
+    let package_names = packages_result.clone().into_iter().map(|x| {extract_package_name(x.as_str())});
+
+    let amount = services_result.len();
+
+    println!("========= Services {} =========", services_result.clone().iter().count());
+    for entry in service_names {
+        println!("Service: {}", entry.as_str().unwrap());
+    }
+
+    println!("========= Packages {} =========", packages_result.clone().iter().count());
+    for entry in package_names {
+        println!("Package: {}", entry.as_str().unwrap())
+    }
 }
