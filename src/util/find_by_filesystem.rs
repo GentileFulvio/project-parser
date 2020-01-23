@@ -14,7 +14,17 @@ fn contains_any_strings(data: &str, strings: Vec<&str>) -> bool {
         }
     }
 
-    return false;
+    false
+}
+
+fn contains_all_strings(data: &str, strings: Vec<&str>) -> bool {
+    for entry in strings {
+        if !data.contains(entry) {
+            return false;
+        }
+    }
+
+    true
 }
 
 fn find(params: FindParams) -> Vec<String> {
@@ -44,7 +54,7 @@ fn find(params: FindParams) -> Vec<String> {
                  result.push(m);
             }
         } else {
-            if contains_any_strings(path_str, check.clone()) {
+            if contains_all_strings(path_str, check.clone()) {
                 result.push(String::from(path_str));
             }
         }
@@ -56,18 +66,19 @@ fn find(params: FindParams) -> Vec<String> {
 pub fn find_by_filesystem() {
     let cwd = get_working_dir().unwrap();
 
-    let package_results = find(FindParams{
-       location: cwd.as_str(),
-        check: vec!["package.json"]
-    })
-
-    let result = find(FindParams{
+    let packages_result = find(FindParams{
         location: cwd.as_str(),
-        check: vec!["package.json"],
+        check: vec!["package.json", "packages"],
         ignore: vec!["node_modules"]
     });
 
-    for entry in result {
-        println!("{}", entry);
-    }
+    let services_result = find(FindParams{
+        location: cwd.as_str(),
+        check: vec!["package.json", "services"],
+        ignore: vec!["node_modules"]
+    });
+
+    services_result.into_iter().for_each(|x| {
+        println!("{}", fs::read_to_string(x).unwrap());
+    });
 }
