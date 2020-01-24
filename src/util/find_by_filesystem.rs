@@ -4,68 +4,6 @@ use crate::util::{get_working_dir};
 use serde_json::{Value};
 use std::ops::Add;
 
-struct FindParams<'a> {
-    location: &'a str,
-    check: Vec<&'a str>,
-    ignore: Vec<&'a str>
-}
-
-fn contains_any_strings(data: &str, strings: Vec<&str>) -> bool {
-    for entry in strings {
-        if data.contains(entry) {
-            return true;
-        }
-    }
-
-    false
-}
-
-fn contains_all_strings(data: &str, strings: Vec<&str>) -> bool {
-    for entry in strings {
-        if !data.contains(entry) {
-            return false;
-        }
-    }
-
-    true
-}
-
-fn find(params: FindParams) -> Vec<String> {
-    let location = params.location;
-    let check = params.check;
-    let ignore = params.ignore;
-    let dir = fs::read_dir(location).unwrap();
-    let mut result = Vec::new();
-
-    for entry in dir {
-        let data = entry.unwrap();
-        let path = data.path();
-        let path_str = path.to_str().unwrap();
-
-        if contains_any_strings(path_str, ignore.clone()) {
-            continue
-        }
-
-        if data.file_type().unwrap().is_dir() {
-            let res = find(FindParams{
-                ignore: ignore.clone(),
-                check: check.clone(),
-                location: path_str.clone()
-            });
-
-            for m in res {
-                 result.push(m);
-            }
-        } else {
-            if contains_all_strings(path_str, check.clone()) {
-                result.push(String::from(path_str));
-            }
-        }
-    }
-
-     return result
-}
-
 pub fn get_package_as_json(path: &str) -> Value {
     let package_json = fs::read_to_string(path).unwrap();
     let json_object: Value = serde_json::from_str(package_json.as_str()).unwrap();
@@ -90,36 +28,24 @@ pub fn extract_package_name(value: Value) -> Value {
     return value["name"].clone();
 }
 
-pub fn find_by_filesystem() {
+pub fn find_by_filesystem(package_files: Vec<String>, service_files: Vec<String>) {
     let cwd = get_working_dir().unwrap();
 
-    let packages_result = find(FindParams{
-        location: cwd.as_str(),
-        check: vec!["package.json", "packages"],
-        ignore: vec!["node_modules"]
-    });
-
-    let services_result = find(FindParams{
-        location: cwd.as_str(),
-        check: vec!["package.json", "services"],
-        ignore: vec!["node_modules"]
-    });
-
-    let service_names = services_result.clone().into_iter().map(|x| {
+    let service_names = service_files.clone().into_iter().map(|x| {
         let json_object = get_package_as_json(x.as_str());
 
         (extract_package_name(json_object.clone()), extract_dependencies(json_object.clone()))
     });
-    let package_names = packages_result.clone().into_iter().map(|x| {
+    let package_names = package_files.clone().into_iter().map(|x| {
         let json_object = get_package_as_json(x.as_str());
 
         extract_package_name(json_object)
     });
 
-    println!("========= Services {} =========", services_result.iter().count());
+    println!("========= Services {} =========", service_files.iter().count());
 
     for (name, deps) in service_names {
-        let package_dependencies = packages_result.clone().into_iter().fold(String::new(), |acc, p| {
+        let package_dependencies = package_files.clone().into_iter().fold(String::new(), |acc, p| {
             let json_object = get_package_as_json(p.as_str());
 
             let name = extract_package_name(json_object);
@@ -140,7 +66,7 @@ pub fn find_by_filesystem() {
         }
     }
 
-    println!("========= Packages {} =========", packages_result.iter().count());
+    println!("========= Packages {} =========", package_files.iter().count());
 
     for entry in package_names {
         println!("Package: {}", entry.as_str().unwrap())
