@@ -1,5 +1,6 @@
 mod find_by_filesystem;
 mod find_by_glob;
+mod find_by_filesystem_regex;
 use std::env;
 
 pub fn get_working_dir() -> Option<String> {
@@ -26,4 +27,8 @@ pub fn find_by_filesystem() {
 
 pub fn find_by_glob() {
     find_by_glob::search_by_glob();
+}
+
+pub fn find_by_filesystem_regex() {
+    find_by_filesystem_regex::exec();
 }
